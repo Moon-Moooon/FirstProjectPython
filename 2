@@ -1,0 +1,75 @@
+import requests
+import datetime
+import csv
+
+class ApiWork:
+    def __init__(self):
+        self.__page = 0
+        self.__size = 100
+        self.__next = True
+        self.__response_json: dict = None
+        self.__content: dict = None
+        self.__contentPack = []
+
+    @staticmethod
+    def Go():
+        obj = ApiWork()
+        while obj.__next == True:
+            obj.__getContent()
+            obj.__contentPack.extend(obj.__content)
+            #obj.__next = False
+            obj.__page += 1
+            obj.__Isnext()
+
+        return obj.__contentPack
+
+    def __getContent(self):
+        _url = f"https://www.zulutrade.com/zulutrade-client/trading/api/providers/420820/trades/history?timeframe=10000&page={self.__page}&size={self.__size}&sort=dateClosed,desc"
+        respons = requests.get(_url)
+        self.__response_json = respons.json()
+        self.__content = self.__response_json["content"]
+
+    def __Isnext(self):
+        lastBool = self.__response_json["last"]
+        if(lastBool == True):
+            self.__next = False
+
+colums = ["currency", "tradeType", "transactionCurrency", "dateOpen", "dateClosed", "lots", "priceOpen",
+              "priceClosed", "maxProfit", "worstDrawdown", "interest", "netPnl", "pips", "totalAccumulatedPnl",
+              "totalAccumulatedPips"]
+
+def WriteInFile(a):
+    with open("Test_users.csv", "w", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(colums)
+        writer = csv.DictWriter(file, fieldnames= colums)
+        writer.writerows(a)
+
+        print("gotovo")
+def iter(item):
+    newDict = {}
+    time = [colums[3], colums[4]]
+
+    for i in (range(len(colums))):
+        if colums[i] in item:
+            newDict[colums[i]] = item[colums[i]]
+
+        if colums[i] in time:
+            newDict[colums[i]] = str(datetime.datetime.fromtimestamp(newDict[colums[i]] / 1000))
+
+    return newDict
+
+def reCreateDict(list_dict):
+
+    newListDict = []
+    for item in list_dict:
+        newListDict.append(iter(item))
+
+    return newListDict
+
+def main():
+    a = ApiWork.Go()
+    b = reCreateDict(a)
+    WriteInFile(b)
+
+main()
